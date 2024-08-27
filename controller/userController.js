@@ -3,16 +3,27 @@
 import userModel from "../Models/userModel.js";
 
 import asyncHandler from "../middlewares/asyncHandler.js";
+import { getResetPasswordTemplate } from "../utils/emailTemplates.js";
 import errorHandler from "../utils/errorHandler.js";
+import sendEmail from "../utils/sendEmail.js";
 import sendToken from "../utils/sendToken.js";
+import crypto from "crypto"
+
 
 //Register new User=>>>>>>>>>>>>>>>>>>>..>/api/v1/user/signupUser
 export const signupUser=asyncHandler(async(req,res,next)=>{
 
-    const{name,email,password}=req.body;
+    const{name,email,password,confirmPassword}=req.body;
+  
+
+    //check if the password is matched with confirm password
+    if (password !== confirmPassword) {
+        return next(new errorHandler("passwords do not match",400))
+    }
 
       const newUser=await userModel.create({name,email,password})
-
+      
+      newUser.password=undefined;//to avoid sending password in the res
 
       sendToken(newUser,201,"registered",res)
 })
@@ -42,6 +53,8 @@ export const LoginUser=asyncHandler(async(req,res,next)=>{
         return next(new errorHandler("invalid user or passwird",401));
     }
 
+    user.password = undefined;
+
     sendToken(user,200,"loggedin",res)
 
     //   const token=use
@@ -63,7 +76,9 @@ export const LogoutUser=asyncHandler(async(req,res,next)=>{
 
 })
 
-//Forgot password=>>>>>>>>>>>>>/api/v1/user/password/forgot(not completed!!!!!!)
+//Forgot password=>>>>>>>>>>>>>/api/v1/user/password/forgot
+
+
 export const forgotPassword=asyncHandler(async(req,res,next)=>{
 
     const user=await userModel.findOne({email:req.body.email})
@@ -76,6 +91,68 @@ export const forgotPassword=asyncHandler(async(req,res,next)=>{
     await user.save();
 
     //create reset password URL
+    const resetUrl=`${process.env.FRONEND_URL}/api/v1/user/resetPassword/${resetToken}`;
+
+    const message=getResetPasswordTemplate(user?.name,resetUrl);
+
+    try{
+        await sendEmail({
+            email:user.email,
+            subject:'Password Recovery',
+            message,
+
+        });
+        res.status(200).json({
+            message:`Email send to :${user.email}`,
+        })
+    }catch(error){
+     user.resetPasswordToken=undefined;
+     user.resetPasswordExpire=undefined;
+
+     await user.save();
+     return next(new errorHandler(error?.message,500))
+    }
+
+})
+
+// Reset Password >>>>>>>>/api/v1/user/resetPassword/:token
+
+export const resetPassword=asyncHandler(async(req,res,next)=>{
+
+    //hash the url token
+
+    const resetPasswordToken=crypto
+    .createHash('sha256')
+    .update(req.params.token)
+    .digest('hex');
+
+    const user=await userModel.findOne({
+        resetPasswordToken,
+        resetPasswordExpire:{$gt:Date.now()} //if resetPasswordExpired greaterthan current time mean the token is not expired
+    })
+
+    //check if the reset token is invalid or expired
+
+    if(!user){
+        return next(new errorHandler("password reset token is invalid or has been expired",404))
+    }
+
+    //check password and confirm password is same
+
+    if(req.body.password != req.body.confirmPassword){
+        return next(new errorHandler("passwords does not match",400))
+      
+    }
+
+    //set new password
+    user.password=req.body.password
+
+    user.resetPasswordToken=undefined;
+    user.resetPasswordExpire=undefined;
+
+    await user.save();
+
+    sendToken(user,200,"password reset successfully",res)
 
 })
 
@@ -98,7 +175,7 @@ export const updatePassword=asyncHandler(async(req,res,next)=>{
 
     const user=await userModel.findById(req?.user?._id).select("+password");
 
-  //chech prev password
+  //check prev password
 
   const isPasswordMatched=await user.comparePassword(req.body.oldPassword);
 

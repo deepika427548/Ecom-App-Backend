@@ -13,7 +13,7 @@ productRouter.put('/seller/updateProductBySeller/:id',isAuthenticatedUser,author
 productRouter.delete('/seller/deleteProductBySeller/:id',isAuthenticatedUser,authoriseRoles('seller') ,deleteProductBySeller)
 productRouter.get('/seller/getProductsBySeller',isAuthenticatedUser,authoriseRoles('seller') ,getProductsBySeller)
 
-productRouter.get('/getAllProducts',isAuthenticatedUser,authoriseRoles('admin','seller') ,getAllProducts)
+productRouter.get('/getAllProducts',getAllProducts)
 productRouter.get('/getProductById/:id',getProductById)
 
 

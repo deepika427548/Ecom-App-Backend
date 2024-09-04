@@ -42,7 +42,7 @@ export const createNewOrder=asyncHandler(async(req,res,next)=>{
     export const MyOrder=asyncHandler(async(req,res,next)=>{
        
         const orders=await orderModel.find({user:req.user._id});
-        console.log({user:req.user._id});
+       
         
     
         // if(!order){

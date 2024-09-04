@@ -3,6 +3,7 @@
 import userModel from "../Models/userModel.js";
 
 import asyncHandler from "../middlewares/asyncHandler.js";
+import { upload_file } from "../utils/clodinary.js";
 import { getResetPasswordTemplate } from "../utils/emailTemplates.js";
 import errorHandler from "../utils/errorHandler.js";
 import sendEmail from "../utils/sendEmail.js";
@@ -11,22 +12,49 @@ import crypto from "crypto"
 
 
 //Register new User=>>>>>>>>>>>>>>>>>>>..>/api/v1/user/signupUser
-export const signupUser=asyncHandler(async(req,res,next)=>{
+// export const signupUser=asyncHandler(async(req,res,next)=>{
 
-    const{name,email,password,confirmPassword}=req.body;
+//     const{name,email,password,confirmPassword}=req.body;
   
 
-    //check if the password is matched with confirm password
-    if (password !== confirmPassword) {
-        return next(new errorHandler("passwords do not match",400))
-    }
+//     //check if the password is matched with confirm password
+//     if (password !== confirmPassword) {
+//         return next(new errorHandler("passwords do not match",400))
+//     }
+    
 
-      const newUser=await userModel.create({name,email,password})
+//       const newUser=await userModel.create({name,email,password})
       
-      newUser.password=undefined;//to avoid sending password in the res
+//       newUser.password=undefined;//to avoid sending password in the res
 
-      sendToken(newUser,201,"registered",res)
-})
+//       sendToken(newUser,201,"registered",res)
+// })
+
+// Register new User => /api/v1/user/signupUser
+export const signupUser = asyncHandler(async (req, res, next) => {
+    const { name, email, password, confirmPassword } = req.body;
+  
+    // Check if the password matches confirm password
+    if (password !== confirmPassword) {
+      return next(new errorHandler("Passwords do not match", 400));
+    }
+  
+    try {
+      const newUser = await userModel.create({ name, email, password });
+  
+      newUser.password = undefined; // To avoid sending password in the response
+  
+      sendToken(newUser, 201, "Registered successfully", res);
+    } catch (error) {
+      // Check for duplicate email error
+      if (error.code === 11000) {
+        return next(new errorHandler("Email is already registered", 400));
+      }
+      // If it's another error, pass it along to the error handling middleware
+      return next(error);
+    }
+  });
+  
 
 //Login User=>>>>>>>>>>>>>>>>>>>/api/v1/user/loginUser
 export const LoginUser=asyncHandler(async(req,res,next)=>{
@@ -75,6 +103,22 @@ export const LogoutUser=asyncHandler(async(req,res,next)=>{
     res.status(200).json({message:"loggedOut",})
 
 })
+
+
+//Upload user Avatar(profile pic)=>>>>>>>>>>>>>>>>/api/v1/user/uploadAvatar
+export const uploadAvatar=asyncHandler(async(req,res,next)=>{
+    
+    const avatarResponse=await upload_file(req.body.avatar,"e-cart/avatar")
+
+
+    const user=await userModel.findByIdAndUpdate(req?.user?._id,{
+        avatar:avatarResponse
+    })
+
+    res.status(200).json({user,})
+
+})
+
 
 //Forgot password=>>>>>>>>>>>>>/api/v1/user/password/forgot
 

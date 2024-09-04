@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import cors from "cors"; 
 import apirouter from "./routes/index.js";
 import { connectDb } from "./config/connectDb.js";
 import errorMiddelware from './middlewares/error.js'
@@ -9,6 +10,14 @@ import errorMiddelware from './middlewares/error.js'
 
 const app=express();
 dotenv.config({path:'./config/config.env'})
+
+app.use(cors({
+    origin: 'http://localhost:3000',
+    methods: 'GET,POST,PUT,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Authorization'
+  }));
+
+  
 app.use(express.json());
 app.use(cookieParser())
 app.use('/api',apirouter);

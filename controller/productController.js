@@ -4,14 +4,17 @@ import asyncHandler from "../middlewares/asyncHandler.js";
 import ApiFilters from "../utils/apiFilters.js";
 
 //get all products >>>> http://localhost:4444/api/v1/product/getAllProducts
-export const getAllProducts=async(req,res)=>{
+export const getAllProducts=async(req,res,next)=>{
 const rePerPage=4;
     //create an instance of apiFilter and call search fuction
-    console.log(req.query);
+    // console.log(req.query);
+    
     const apiFilters=new ApiFilters(productModel,req.query).search().filter();
 
     let product= await apiFilters.query;
     const filteredProductCount=product.length
+
+    
       
     apiFilters.pagination(rePerPage);
     product=await apiFilters.query.clone();
@@ -20,7 +23,7 @@ const rePerPage=4;
     // const products=await productModel.find();
 //    console.log("user:",req.user);
    
-    res.status(200).json({filteredProductCount,product,})
+    res.status(200).json({filteredProductCount,rePerPage,product,})
 }
 
 
